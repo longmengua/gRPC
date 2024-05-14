@@ -1,47 +1,59 @@
-import * as grpc from 'grpc';
-import * as protoLoader from '@grpc/proto-loader';
-import * as express from 'express';
-import * as bodyParser from 'body-parser';
+import { Server, ServerCredentials, ServerUnaryCall, sendUnaryData, UntypedHandleCall } from '@grpc/grpc-js';
+import * as http from 'http';
+import { hello } from './pb/hello'
 
-const PROTO_PATH = './path/to/your/protofile.proto'; // Update this with your proto file path
-
-const packageDefinition = protoLoader.loadSync(
-    PROTO_PATH,
-    {keepCase: true,
-     longs: String,
-     enums: String,
-     defaults: true,
-     oneofs: true
-});
-
-const hello_proto: any = grpc.loadPackageDefinition(packageDefinition).helloworld;
-
-function sayHello(call: any, callback: any) {
-  callback(null, {message: 'Hello ' + call.request.name});
+class GreeterService implements hello.UnimplementedGreeterService {
+  [method: string]: UntypedHandleCall;
+  SayHello(call: ServerUnaryCall<hello.HelloRequest, hello.HelloResponse>, callback: sendUnaryData<hello.HelloResponse>): void {
+    console.log("calling")
+  }
 }
 
-function startGRPCServer() {
-  const server = new grpc.Server();
-  server.addService(hello_proto.Greeter.service, {sayHello: sayHello});
-  server.bind('127.0.0.1:50051', grpc.ServerCredentials.createInsecure());
-  server.start();
-  console.log('gRPC Server running at http://127.0.0.1:50051');
-}
+// 創建 gRPC 伺服器
+function createGrpcServer() {
+  const port = 8001
 
-function startHTTPServer() {
-  const app = express();
-  const port = 8001;
+  const greeterService = new GreeterService()
+  const server = new Server();
 
-  app.use(bodyParser.json());
+  server.addService(hello.UnimplementedGreeterService.definition, greeterService);
 
-  app.get('/api', (req, res) => {
-    res.status(200).send('Hello from HTTP Server!\n');
-  });
-
-  app.listen(port, () => {
-    console.log(`HTTP Server running at http://localhost:${port}`);
+  server.bindAsync(`0.0.0.0:${port}`, ServerCredentials.createInsecure(), (err, port) => {
+    if (err != null) {
+      return console.error(err);
+    }
+    console.log(`gRPC listening on ${port}`)
   });
 }
 
-startGRPCServer();
-startHTTPServer();
+// 創建 HTTP 伺服器
+function createHttpServer() {
+  const port = 8002
+
+  const httpServer = http.createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('Hello from HTTP server!\n');
+  });
+
+  httpServer.listen(port, '0.0.0.0', () => {
+      console.log(`HTTP Server running at http://0.0.0.0:${port}`);
+  });
+}
+
+// 啟動 gRPC 伺服器
+function startGrpcServer() {
+    createGrpcServer();
+}
+
+// 啟動 HTTP 伺服器
+function startHttpServer() {
+    createHttpServer();
+}
+
+// 啟動 gRPC 伺服器和 HTTP 伺服器
+function main() {
+    startGrpcServer();
+    startHttpServer();
+}
+
+main();

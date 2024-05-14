@@ -6,7 +6,8 @@ package hello;
 option go_package = "./hello";
 
 service Greeter {
-    rpc SayHello (HelloRequest) returns (HelloResponse);
+    // Sends a greeting
+    rpc SayHello (HelloRequest) returns (HelloResponse) {}
 }
 
 message HelloRequest {
