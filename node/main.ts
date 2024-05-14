@@ -1,11 +1,19 @@
 import { Server, ServerCredentials, ServerUnaryCall, sendUnaryData, UntypedHandleCall } from '@grpc/grpc-js';
-import * as http from 'http';
+import express from 'express';
 import { hello } from './pb/hello'
+import { callGreeterService } from './service/greeter'
 
 class GreeterService implements hello.UnimplementedGreeterService {
   [method: string]: UntypedHandleCall;
   SayHello(call: ServerUnaryCall<hello.HelloRequest, hello.HelloResponse>, callback: sendUnaryData<hello.HelloResponse>): void {
-    console.log("calling")
+    const request = call.request;
+
+    // 創建回覆
+    const response = new hello.HelloResponse();
+    response.message = `hello from node grpc server, ${request.name}`;
+
+    // 回覆客戶端
+    callback(null, response);
   }
 }
 
@@ -30,13 +38,15 @@ function createGrpcServer() {
 function createHttpServer() {
   const port = 8002
 
-  const httpServer = http.createServer((req, res) => {
-      res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('Hello from HTTP server!\n');
+  const app = express();
+
+  app.get('/', async (req, res) => {
+    const data = await callGreeterService()
+    res.send(`message from golang gRPC server, ${data}`);
   });
 
-  httpServer.listen(port, '0.0.0.0', () => {
-      console.log(`HTTP Server running at http://0.0.0.0:${port}`);
+  app.listen(port, () => {
+    console.log(`HTTP server listening on port ${port}...`);
   });
 }
 
