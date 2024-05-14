@@ -1,5 +1,9 @@
 # gRPC
 
+## introduction
+
+- this is an example to demonstrate transport data over gRPC between golang and node
+
 ## command test
 
 - node gRPC
